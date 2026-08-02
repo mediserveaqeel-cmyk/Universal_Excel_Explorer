@@ -5,16 +5,284 @@ import streamlit as st
 from core.loader import DataLoader
 from core.filters import detect_column_type, apply_rules, NUMERIC_OPS, DATE_OPS
 
-st.set_page_config(page_title="Universal Data Extractor by Muhammad AQEEL", layout="wide")
-st.title("📊 Universal Data Extractor by Muhammad AQEEL")
-st.caption("Upload any Excel/CSV report, pick exactly the columns you want, filter the rows you want, and download the extract.")
+st.set_page_config(page_title="Universal Data Extractor", page_icon="📊", layout="wide")
+
+# ============================================================
+#  THEME  --  dark navy / teal "data ops" dashboard
+# ============================================================
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');
+
+    :root {
+        --bg-primary:   #0B1220;
+        --bg-secondary: #101a30;
+        --surface:      #16213b;
+        --border:       #263353;
+        --text-primary: #EDEFF5;
+        --text-muted:   #93A0BC;
+        --teal:         #2DD4BF;
+        --teal-dim:     rgba(45, 212, 191, 0.14);
+        --amber:        #F5A623;
+    }
+
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+    .stApp {
+        background: radial-gradient(circle at 15% 0%, #10233a 0%, var(--bg-primary) 45%) fixed;
+        color: var(--text-primary);
+    }
+
+    /* ---------- Hero ---------- */
+    .aqx-hero {
+        background: linear-gradient(135deg, #0B1220 0%, #132038 55%, #0E2A2C 100%);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem 2.25rem;
+        margin-bottom: 1.75rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .aqx-hero::after {
+        content: "";
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 220px; height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(45,212,191,0.18) 0%, transparent 70%);
+    }
+    .aqx-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--teal);
+        margin-bottom: 0.5rem;
+    }
+    .aqx-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 2.1rem;
+        color: var(--text-primary);
+        margin: 0 0 0.35rem 0;
+        line-height: 1.15;
+    }
+    .aqx-subtitle {
+        color: var(--text-muted);
+        font-size: 0.98rem;
+        max-width: 640px;
+        margin-bottom: 0.9rem;
+    }
+    .aqx-credit {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.76rem;
+        color: var(--teal);
+        background: var(--teal-dim);
+        border: 1px solid rgba(45, 212, 191, 0.35);
+        padding: 0.32rem 0.7rem;
+        border-radius: 999px;
+    }
+
+    /* ---------- Stat tiles ---------- */
+    .aqx-stat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        text-align: left;
+    }
+    .aqx-stat-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 0.3rem;
+    }
+    .aqx-stat-value {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--teal);
+    }
+
+    /* ---------- Step headers ---------- */
+    .aqx-step {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        margin: 1.9rem 0 0.9rem 0;
+    }
+    .aqx-step-badge {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: #06231F;
+        background: var(--teal);
+        width: 30px; height: 30px;
+        min-width: 30px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .aqx-step-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        font-size: 1.2rem;
+        color: var(--text-primary);
+    }
+
+    /* ---------- Widgets ---------- */
+    .stButton>button {
+        background: var(--surface);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.15s ease;
+    }
+    .stButton>button:hover {
+        border-color: var(--teal);
+        color: var(--teal);
+    }
+    .stDownloadButton>button {
+        background: var(--teal);
+        color: #06231F;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    .stDownloadButton>button:hover {
+        background: #4EEBD8;
+    }
+    div[data-testid="stExpander"], div[data-testid="stForm"] {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+    div[data-testid="stTextInput"] input, div[data-testid="stNumberInput"] input {
+        background: var(--bg-secondary) !important;
+        color: var(--text-primary) !important;
+        border-radius: 8px !important;
+    }
+
+    /* ---------- Footer ---------- */
+    .aqx-footer {
+        margin-top: 3rem;
+        padding-top: 1.1rem;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+    }
+    .aqx-footer span { color: var(--teal); }
+
+    /* ---------- Mobile responsiveness ---------- */
+    @media (max-width: 480px) {
+        .aqx-hero { padding: 1.25rem 1.1rem; border-radius: 12px; }
+        .aqx-title { font-size: 1.5rem; }
+        .aqx-subtitle { font-size: 0.88rem; }
+        .aqx-step-title { font-size: 1.02rem; }
+        .aqx-stat { padding: 0.7rem 0.8rem; }
+        .aqx-stat-value { font-size: 1.25rem; }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+def step_header(number, title):
+    st.markdown(
+        f"""
+        <div class="aqx-step">
+            <div class="aqx-step-badge">{number}</div>
+            <div class="aqx-step-title">{title}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def stat_tile(col, label, value):
+    col.markdown(
+        f"""
+        <div class="aqx-stat">
+            <div class="aqx-stat-label">{label}</div>
+            <div class="aqx-stat-value">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ============================================================
+#  HERO
+# ============================================================
+st.markdown(
+    """
+    <div class="aqx-hero">
+        <div class="aqx-eyebrow">DATA EXTRACTION TOOLKIT</div>
+        <div class="aqx-title">📊 Universal Data Extractor</div>
+        <div class="aqx-subtitle">
+            Upload any Excel or CSV report, pick exactly the columns you want,
+            filter down to the rows that matter, strip out the empty noise,
+            and download a clean extract.
+        </div>
+        <div class="aqx-credit">⚙ Developed by Muhammad Aqeel</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 loader = DataLoader()
+
+# ---------------- IN-APP BROWSER WARNING ----------------
+# Instagram / Facebook / WhatsApp / Line etc. open links in a restricted
+# in-app WebView that blocks native file uploads -- Streamlit's uploader
+# throws an error there even though the app itself is fine. Detect the
+# common signatures and tell people to open in a real browser instead.
+try:
+    _user_agent = st.context.headers.get("User-Agent", "") or ""
+except Exception:
+    _user_agent = ""
+
+_in_app_signatures = ["Instagram", "FBAN", "FBAV", "FB_IAB", "Line/", "MicroMessenger", "TikTok", "Snapchat"]
+_is_in_app_browser = any(sig.lower() in _user_agent.lower() for sig in _in_app_signatures)
+
+if _is_in_app_browser:
+    st.warning(
+        "⚠️ **You're viewing this inside an app's built-in browser** "
+        "(Instagram, Facebook, WhatsApp, or similar). These block file uploads. "
+        "Tap the **⋮** or **•••** menu at the top of the screen and choose "
+        "**'Open in Browser'** (Chrome/Safari) to upload your file.",
+        icon="⚠️",
+    )
 
 if "rules" not in st.session_state:
     st.session_state.rules = []  # list of dicts: {column, type, op, value}
 
-uploaded_file = st.file_uploader("Upload file", type=["xlsx", "xls", "csv"])
+uploaded_file = st.file_uploader(
+    "Upload file",
+    type=None,  # no restriction here -- some mobile browsers filter out
+                # Excel files entirely when a type/accept list is set,
+                # because they match by MIME type instead of extension.
+                # We validate the extension ourselves below instead.
+    help="Excel (.xlsx / .xls) or CSV",
+)
+
+if uploaded_file is not None:
+    _valid_extensions = (".xlsx", ".xls", ".csv")
+    if not uploaded_file.name.lower().endswith(_valid_extensions):
+        st.error(
+            f"'{uploaded_file.name}' isn't a supported file type. "
+            "Please upload an .xlsx, .xls, or .csv file."
+        )
+        uploaded_file = None
 
 if uploaded_file:
     sheet_names = loader.sheet_names(uploaded_file)
@@ -25,12 +293,11 @@ if uploaded_file:
     df = loader.load(uploaded_file, sheet_name=sheet)
     col_types = {c: detect_column_type(df[c]) for c in df.columns}
 
-    st.success(f"Loaded {df.shape[0]} rows × {df.shape[1]} columns")
     with st.expander("Preview raw data"):
-        st.dataframe(df.head(20), use_container_width=True)
+        st.dataframe(df.head(20), width="stretch")
 
     # ---------------- COLUMN SELECTION ----------------
-    st.subheader("1️⃣ Choose columns to extract")
+    step_header(1, "Choose columns to extract")
 
     # Reset the per-column checkbox state whenever a new file/sheet is loaded.
     # Nothing is pre-checked -- you choose exactly the columns you want.
@@ -120,7 +387,7 @@ if uploaded_file:
     st.caption(f"**{len(selected_columns)} of {len(df.columns)} columns selected**")
 
     # ---------------- ROW FILTER BUILDER ----------------
-    st.subheader("2️⃣ Filter rows")
+    step_header(2, "Filter rows")
 
     filter_column = st.selectbox(
         "Which column do you want to filter by?",
@@ -240,7 +507,7 @@ if uploaded_file:
             st.rerun()
 
     # ---------------- EXTRACT ----------------
-    st.subheader("3️⃣ Select columns & filter result")
+    step_header(3, "Select columns & filter result")
 
     try:
         filtered = apply_rules(df, st.session_state.rules)
@@ -255,7 +522,7 @@ if uploaded_file:
         st.info("No columns checked yet in step 1 -- showing all columns. Check the ones you want to narrow this down.")
 
     # ---------------- CLEAN EMPTY ROWS ----------------
-    st.subheader("4️⃣ Remove empty rows")
+    step_header(4, "Remove empty rows")
 
     check_cols = selected_columns if selected_columns else list(extracted.columns)
 
@@ -294,11 +561,19 @@ if uploaded_file:
     else:
         st.caption(f"{len(extracted)} row(s) -- empty-row removal is off.")
 
+    # ---------------- LIVE STATS STRIP ----------------
+    s1, s2, s3, s4 = st.columns(4)
+    stat_tile(s1, "Rows Loaded", f"{df.shape[0]:,}")
+    stat_tile(s2, "Columns Detected", f"{df.shape[1]:,}")
+    stat_tile(s3, "Columns Selected", f"{len(selected_columns):,}")
+    stat_tile(s4, "Rows in Export", f"{len(extracted):,}")
+
+    st.write("")
     st.write(f"**{len(extracted)} rows × {len(extracted.columns)} columns**")
-    st.dataframe(extracted, use_container_width=True)
+    st.dataframe(extracted, width="stretch")
 
     # ---------------- DOWNLOAD ----------------
-    st.subheader("5️⃣ Download")
+    step_header(5, "Download")
     dl_format = st.radio("Format", ["Excel (.xlsx)", "CSV (.csv)"], horizontal=True)
 
     if dl_format == "Excel (.xlsx)":
@@ -321,3 +596,15 @@ if uploaded_file:
         )
 else:
     st.info("Upload a file to get started.")
+
+# ============================================================
+#  FOOTER
+# ============================================================
+st.markdown(
+    """
+    <div class="aqx-footer">
+        Universal Data Extractor &nbsp;•&nbsp; Developed by <span>Muhammad Aqeel</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
