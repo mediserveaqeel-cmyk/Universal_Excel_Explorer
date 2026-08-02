@@ -6,7 +6,7 @@ from core.loader import DataLoader
 from core.filters import detect_column_type, apply_rules, NUMERIC_OPS, DATE_OPS
 
 st.set_page_config(page_title="Universal Data Extractor by Muhammad AQEEL", layout="wide")
-st.title("📊 Universal Data Extractor")
+st.title("📊 Universal Data Extractor by Muhammad AQEEL")
 st.caption("Upload any Excel/CSV report, pick exactly the columns you want, filter the rows you want, and download the extract.")
 
 loader = DataLoader()
