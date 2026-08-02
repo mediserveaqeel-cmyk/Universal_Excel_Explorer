@@ -524,42 +524,61 @@ if uploaded_file:
     # ---------------- CLEAN EMPTY ROWS ----------------
     step_header(4, "Remove empty rows")
 
-    check_cols = selected_columns if selected_columns else list(extracted.columns)
-
-    ec1, ec2 = st.columns(2)
-    drop_empty = ec1.checkbox(
-        "Drop rows that are empty across all selected columns",
-        value=True,
-        help="A row is removed only if EVERY selected column is blank for it -- "
-             "rows with at least one value stay.",
-    )
-    treat_zero_as_empty = ec2.checkbox(
-        "Also treat 0 as empty",
-        value=True,
-        help="Useful for quantity/value columns where 0 means 'no data', like unsold products.",
-    )
-
-    if drop_empty and check_cols:
-        sub = extracted[check_cols]
-
-        def _cell_is_empty(v):
-            if pd.isna(v):
-                return True
-            if isinstance(v, str) and v.strip() == "":
-                return True
-            if treat_zero_as_empty and isinstance(v, (int, float)) and not isinstance(v, bool) and v == 0:
-                return True
-            return False
-
-        empty_mask = sub.apply(lambda col: col.map(_cell_is_empty))
-        row_all_empty = empty_mask.all(axis=1)
-
-        before = len(extracted)
-        extracted = extracted[~row_all_empty]
-        removed = before - len(extracted)
-        st.caption(f"🧹 Removed **{removed}** empty row(s) -- **{len(extracted)}** row(s) remain.")
+    if not selected_columns:
+        # Nothing selected yet in step 1 -- skip this entirely rather than
+        # scanning every column in the file on every rerun. That eager
+        # full-width scan was slow on wide files and, on flaky mobile
+        # connections, could be slow enough to trip a proxy timeout.
+        st.caption("Select at least one column in step 1 to enable empty-row cleanup.")
+        drop_empty = False
     else:
-        st.caption(f"{len(extracted)} row(s) -- empty-row removal is off.")
+        check_cols = selected_columns
+
+        ec1, ec2 = st.columns(2)
+        drop_empty = ec1.checkbox(
+            "Drop rows that are empty across all selected columns",
+            value=True,
+            help="A row is removed only if EVERY selected column is blank for it -- "
+                 "rows with at least one value stay.",
+        )
+        treat_zero_as_empty = ec2.checkbox(
+            "Also treat 0 as empty",
+            value=True,
+            help="Useful for quantity/value columns where 0 means 'no data', like unsold products.",
+        )
+
+        if drop_empty:
+            sub = extracted[check_cols]
+
+            # Vectorized emptiness check (fast even on very wide files) --
+            # no per-cell Python function calls.
+            na_mask = sub.isna()
+
+            text_cols = sub.select_dtypes(include=["object", "string"]).columns
+            if len(text_cols):
+                blank_mask = sub[text_cols].astype(str).apply(lambda s: s.str.strip() == "")
+                blank_mask = blank_mask.reindex(columns=sub.columns, fill_value=False)
+            else:
+                blank_mask = pd.DataFrame(False, index=sub.index, columns=sub.columns)
+
+            if treat_zero_as_empty:
+                num_cols = sub.select_dtypes(include="number").columns
+                if len(num_cols):
+                    zero_mask = sub[num_cols] == 0
+                    zero_mask = zero_mask.reindex(columns=sub.columns, fill_value=False)
+                else:
+                    zero_mask = pd.DataFrame(False, index=sub.index, columns=sub.columns)
+            else:
+                zero_mask = pd.DataFrame(False, index=sub.index, columns=sub.columns)
+
+            row_all_empty = (na_mask | blank_mask | zero_mask).all(axis=1)
+
+            before = len(extracted)
+            extracted = extracted[~row_all_empty]
+            removed = before - len(extracted)
+            st.caption(f"🧹 Removed **{removed}** empty row(s) -- **{len(extracted)}** row(s) remain.")
+        else:
+            st.caption(f"{len(extracted)} row(s) -- empty-row removal is off.")
 
     # ---------------- LIVE STATS STRIP ----------------
     s1, s2, s3, s4 = st.columns(4)
