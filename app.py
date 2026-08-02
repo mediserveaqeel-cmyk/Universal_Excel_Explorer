@@ -5,7 +5,7 @@ import streamlit as st
 from core.loader import DataLoader
 from core.filters import detect_column_type, apply_rules, NUMERIC_OPS, DATE_OPS
 
-st.set_page_config(page_title="Universal Data Extractor", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Universal Data Extractor by Muhammad Aqeel", page_icon="📊", layout="wide")
 
 # ============================================================
 #  THEME  --  dark navy / teal "data ops" dashboard
@@ -180,16 +180,6 @@ st.markdown(
         font-size: 0.78rem;
     }
     .aqx-footer span { color: var(--teal); }
-
-    /* ---------- Mobile responsiveness ---------- */
-    @media (max-width: 480px) {
-        .aqx-hero { padding: 1.25rem 1.1rem; border-radius: 12px; }
-        .aqx-title { font-size: 1.5rem; }
-        .aqx-subtitle { font-size: 0.88rem; }
-        .aqx-step-title { font-size: 1.02rem; }
-        .aqx-stat { padding: 0.7rem 0.8rem; }
-        .aqx-stat-value { font-size: 1.25rem; }
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -244,23 +234,7 @@ loader = DataLoader()
 if "rules" not in st.session_state:
     st.session_state.rules = []  # list of dicts: {column, type, op, value}
 
-uploaded_file = st.file_uploader(
-    "Upload file",
-    type=None,  # no restriction here -- some mobile browsers filter out
-                # Excel files entirely when a type/accept list is set,
-                # because they match by MIME type instead of extension.
-                # We validate the extension ourselves below instead.
-    help="Excel (.xlsx / .xls) or CSV",
-)
-
-if uploaded_file is not None:
-    _valid_extensions = (".xlsx", ".xls", ".csv")
-    if not uploaded_file.name.lower().endswith(_valid_extensions):
-        st.error(
-            f"'{uploaded_file.name}' isn't a supported file type. "
-            "Please upload an .xlsx, .xls, or .csv file."
-        )
-        uploaded_file = None
+uploaded_file = st.file_uploader("Upload file", type=["xlsx", "xls", "csv"])
 
 if uploaded_file:
     sheet_names = loader.sheet_names(uploaded_file)
